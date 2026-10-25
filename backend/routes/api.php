@@ -18,3 +18,14 @@ Route::get('/auth/google', [\App\Http\Controllers\Auth\GoogleController::class, 
     ->name('google.login');
 Route::get('/auth/google/callback', [\App\Http\Controllers\Auth\GoogleController::class, 'callback'])
     ->name('google.callback');
+
+Route::prefix('categories')->group(function () {
+    Route::get('/', [\App\Http\Controllers\CategoryController::class, 'index']);
+    Route::get('/{slug}', [\App\Http\Controllers\CategoryController::class, 'show']);
+});
+
+Route::prefix('books')->group(function () {
+    Route::get('/', [\App\Http\Controllers\BookController::class, 'index']);
+    Route::get('/featured', [\App\Http\Controllers\BookController::class, 'featured']);
+    Route::get('/{slug}', [\App\Http\Controllers\BookController::class, 'show']);
+});
