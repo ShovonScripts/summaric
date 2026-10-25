@@ -68,9 +68,9 @@ class Book extends Model
     public function scopeSort($query, string $sort)
     {
         return match ($sort) {
-            'title' => $query->orderBy('title'),
-            'read_time' => $query->orderBy('read_time'),
-            default => $query->latest('added_at'),
+            'title' => $query->orderBy('title')->orderBy('id'),
+            'read_time' => $query->orderBy('read_time')->orderBy('id'),
+            default => $query->latest('added_at')->orderBy('id'),
         };
     }
 

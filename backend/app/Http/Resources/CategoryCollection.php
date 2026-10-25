@@ -7,6 +7,14 @@ use Illuminate\Http\Resources\Json\ResourceCollection;
 
 class CategoryCollection extends ResourceCollection
 {
+    public $collects = CategoryResource::class;
+
+    public function __construct($resource)
+    {
+        parent::__construct($resource);
+        $this->withoutWrapping();
+    }
+
     public function toArray(Request $request): array
     {
         return $this->collection->toArray();
