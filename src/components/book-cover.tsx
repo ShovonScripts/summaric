@@ -1,6 +1,5 @@
 import type { CSSProperties } from "react";
-import { getCategory } from "@/data/categories";
-import type { Book, CoverMotif } from "@/types/book";
+import type { Book, CoverMotif } from "@/lib/api";
 
 function Motif({ motif }: { motif: CoverMotif }) {
   switch (motif) {
@@ -155,7 +154,7 @@ export function BookCover({
       </svg>
       <div className="book-cover__content">
         <span className="book-cover__category">
-          {getCategory(book.category).name}
+          {book.category.name}
         </span>
         <div>
           <div className="book-cover__title">{book.title}</div>

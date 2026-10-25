@@ -4,25 +4,22 @@ import { notFound } from "next/navigation";
 import { BookCard } from "@/components/book-card";
 import { BookCover } from "@/components/book-cover";
 import { ClockIcon, TagIcon } from "@/components/icons";
-import { getCategory } from "@/data/categories";
-import {
-  PUBLISHED_BOOKS,
-  getPublishedBookBySlug,
-} from "@/data/books";
+import { getBook, getCategories, getAllPublishedBooks, getCategory } from "@/lib/data";
 
 type BookPageProps = {
   params: Promise<{ slug: string }>;
 };
 
-export function generateStaticParams() {
-  return PUBLISHED_BOOKS.map((book) => ({ slug: book.slug }));
+export async function generateStaticParams() {
+  const books = await getAllPublishedBooks();
+  return books.map((book) => ({ slug: book.slug }));
 }
 
 export async function generateMetadata({
   params,
 }: BookPageProps): Promise<Metadata> {
   const { slug } = await params;
-  const book = getPublishedBookBySlug(slug);
+  const book = await getBook(slug);
 
   if (!book) {
     return { title: "বই পাওয়া যায়নি" };
@@ -41,18 +38,23 @@ export async function generateMetadata({
 
 export default async function BookPage({ params }: BookPageProps) {
   const { slug } = await params;
-  const book = getPublishedBookBySlug(slug);
+  const book = await getBook(slug);
 
   if (!book) notFound();
 
-  const category = getCategory(book.category);
-  const sameCategory = PUBLISHED_BOOKS.filter(
-    (item) => item.category === book.category && item.slug !== book.slug,
+  const [categories, allBooks] = await Promise.all([
+    getCategories(),
+    getAllPublishedBooks(),
+  ]);
+
+  const category = categories.find(c => c.slug === book.category.slug);
+  const sameCategory = allBooks.filter(
+    (item) => item.category.slug === book.category.slug && item.slug !== book.slug,
   );
   const related = [
     ...sameCategory,
-    ...PUBLISHED_BOOKS.filter(
-      (item) => item.slug !== book.slug && item.category !== book.category,
+    ...allBooks.filter(
+      (item) => item.slug !== book.slug && item.category.slug !== book.category.slug,
     ),
   ].slice(0, 3);
 
@@ -91,23 +93,23 @@ export default async function BookPage({ params }: BookPageProps) {
                 <div className="border-t border-line pt-3">
                   <dt className="text-xs text-faint">পড়ার সময়</dt>
                   <dd className="mt-1 text-sm text-ink">
-                    {book.readTime} মিনিট
+                    {book.read_time} মিনিট
                   </dd>
                 </div>
                 <div className="border-t border-line pt-3">
                   <dt className="text-xs text-faint">বিষয়</dt>
-                  <dd className="mt-1 text-sm text-ink">{category.name}</dd>
+                  <dd className="mt-1 text-sm text-ink">{category?.name ?? book.category.name}</dd>
                 </div>
               </dl>
             </div>
 
             <div>
               <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-faint">
-                <span className="text-gold-ink">{category.name}</span>
+                <span className="text-gold-ink">{category?.name ?? book.category.name}</span>
                 <span className="h-4 w-px bg-line" aria-hidden="true" />
                 <span className="inline-flex items-center gap-1.5">
                   <ClockIcon className="size-4" />
-                  {book.readTime} মিনিটের পাঠ
+                  {book.read_time} মিনিটের পাঠ
                 </span>
               </div>
               <h1 className="mt-4 text-[clamp(2.4rem,5vw,4.5rem)] font-semibold leading-[1.12] text-ink">
@@ -176,7 +178,7 @@ export default async function BookPage({ params }: BookPageProps) {
               বইটি পড়ার আগে এই তিনটি সূত্র মনে রাখলে পুরো পাঠটি সহজে ধরা যাবে।
             </p>
             <ul className="mt-8 divide-y divide-line border-y border-line">
-              {book.keyIdeas.map((idea, index) => (
+              {book.key_ideas.map((idea, index) => (
                 <li key={idea} className="flex gap-4 py-5">
                   <span
                     className="mt-2 size-1.5 shrink-0 rounded-full bg-gold"

@@ -1,8 +1,7 @@
 import Link from "next/link";
 import { BookCover } from "@/components/book-cover";
 import { ClockIcon } from "@/components/icons";
-import { getCategory } from "@/data/categories";
-import type { Book } from "@/types/book";
+import type { Book } from "@/lib/api";
 
 export function BookCard({
   book,
@@ -21,11 +20,11 @@ export function BookCard({
       </div>
       <div className="mt-4">
         <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[0.72rem] leading-5 text-faint">
-          <span>{getCategory(book.category).name}</span>
+          <span>{book.category.name}</span>
           <span className="h-px w-3 bg-line-strong" aria-hidden="true" />
           <span className="inline-flex items-center gap-1">
             <ClockIcon className="size-3.5" />
-            {book.readTime} মিনিট
+            {book.read_time} মিনিট
           </span>
         </div>
         <h3 className="mt-1.5 font-display text-[1.35rem] font-semibold leading-snug text-ink transition-colors duration-200 group-hover:text-gold-ink">

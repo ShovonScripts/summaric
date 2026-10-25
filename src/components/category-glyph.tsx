@@ -1,4 +1,4 @@
-import type { CoverMotif } from "@/types/book";
+import type { CoverMotif } from "@/lib/api";
 
 export function CategoryGlyph({ motif }: { motif: CoverMotif }) {
   const common = {

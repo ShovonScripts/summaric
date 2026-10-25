@@ -109,6 +109,77 @@ class ApiClient {
 
 export const api = new ApiClient();
 
+export type CoverMotif =
+  | "ripple"
+  | "wave"
+  | "orbit"
+  | "grid"
+  | "sun"
+  | "steps"
+  | "moon"
+  | "stack"
+  | "spiral"
+  | "arch";
+
+export type BookStatus = "published" | "draft" | "review";
+
+export interface Book {
+  slug: string;
+  title: string;
+  author: string;
+  category: Category;
+  year: number;
+  pages: number;
+  read_time: number;
+  summary: string;
+  key_ideas: string[];
+  quote: string;
+  cover: {
+    base: string;
+    accent: string;
+    ink: string;
+    motif: CoverMotif;
+  };
+  added_at: string;
+  featured: boolean;
+  status: BookStatus;
+  tags: string[];
+}
+
+export interface Category {
+  slug: string;
+  name: string;
+  blurb: string;
+  motif: CoverMotif;
+  books_count: number;
+}
+
+export interface BooksResponse {
+  data: Book[];
+  meta: {
+    current_page: number;
+    last_page: number;
+    per_page: number;
+    total: number;
+  };
+}
+
+export interface FeaturedBookResponse {
+  data: Book | null;
+}
+
+export interface CategoriesResponse {
+  data: Category[];
+}
+
+export interface BookDetailResponse {
+  data: Book;
+}
+
+export interface CategoryDetailResponse {
+  data: Category;
+}
+
 export function getApiBaseUrl(): string {
   return API_BASE_URL;
 }

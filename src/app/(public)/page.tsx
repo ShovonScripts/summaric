@@ -2,19 +2,14 @@ import Link from "next/link";
 import { BookCard } from "@/components/book-card";
 import { BookCover } from "@/components/book-cover";
 import { CategoryGlyph } from "@/components/category-glyph";
+import { SectionHeading } from "@/components/section-heading";
 import {
   ArrowUpRightIcon,
   BookOpenIcon,
   ClockIcon,
   SparkIcon,
 } from "@/components/icons";
-import { SectionHeading } from "@/components/section-heading";
-import {
-  FEATURED_BOOK,
-  PUBLISHED_BOOKS,
-  countBooksByCategory,
-} from "@/data/books";
-import { CATEGORIES } from "@/data/categories";
+import { getFeaturedBook, getCategories, getPublishedBooksCount, getAllPublishedBooks } from "@/lib/data";
 
 const NOTES = [
   {
@@ -37,10 +32,16 @@ const NOTES = [
   },
 ];
 
-export default function HomePage() {
-  const featured = FEATURED_BOOK;
-  const latest = PUBLISHED_BOOKS.filter(
-    (book) => book.slug !== featured.slug,
+export default async function HomePage() {
+  const [featured, categories, totalBooks, allBooks] = await Promise.all([
+    getFeaturedBook(),
+    getCategories(),
+    getPublishedBooksCount(),
+    getAllPublishedBooks(),
+  ]);
+
+  const latest = allBooks.filter(
+    (book) => book.slug !== featured?.slug,
   ).slice(0, 4);
 
   return (
@@ -71,38 +72,42 @@ export default function HomePage() {
                 বইয়ের সংগ্রহ দেখুন
                 <ArrowUpRightIcon className="size-4" />
               </Link>
-              <Link
-                href={`/books/${featured.slug}`}
-                className="btn-secondary"
-              >
-                আজকের সারসংক্ষেপ
-              </Link>
+              {featured && (
+                <Link
+                  href={`/books/${featured.slug}`}
+                  className="btn-secondary"
+                >
+                  আজকের সারসংক্ষেপ
+                </Link>
+              )}
             </div>
             <div className="mt-10 flex flex-wrap items-center gap-x-5 gap-y-3 text-xs text-faint">
-              <span>{PUBLISHED_BOOKS.length}টি বই</span>
+              <span>{totalBooks}টি বই</span>
               <span className="h-4 w-px bg-line" aria-hidden="true" />
-              <span>{CATEGORIES.length}টি বিষয়</span>
+              <span>{categories.length}টি বিষয়</span>
               <span className="h-4 w-px bg-line" aria-hidden="true" />
               <span>প্রতি শুক্রবার নতুন পাঠ</span>
             </div>
           </div>
 
           <div className="relative z-10 mx-auto w-full max-w-[26rem] lg:max-w-none">
-            <div className="relative mx-auto mb-12 w-[74%] max-w-[20rem] sm:w-[60%] lg:mb-0 lg:w-[76%] lg:max-w-[22.5rem]">
-              <BookCover book={featured} className="hero-cover" />
-              <div className="absolute -bottom-7 -left-2 w-[78%] border border-line bg-surface/95 p-4 shadow-[0_20px_60px_rgba(0,0,0,0.28)] backdrop-blur-sm sm:-left-6 sm:p-5 lg:-bottom-8 lg:-left-8">
-                <div className="flex items-center gap-2 text-[0.7rem] text-gold-ink">
-                  <SparkIcon className="size-3.5" />
-                  সপ্তাহের বই
+            {featured && (
+              <div className="relative mx-auto mb-12 w-[74%] max-w-[20rem] sm:w-[60%] lg:mb-0 lg:w-[76%] lg:max-w-[22.5rem]">
+                <BookCover book={featured} className="hero-cover" />
+                <div className="absolute -bottom-7 -left-2 w-[78%] border border-line bg-surface/95 p-4 shadow-[0_20px_60px_rgba(0,0,0,0.28)] backdrop-blur-sm sm:-left-6 sm:p-5 lg:-bottom-8 lg:-left-8">
+                  <div className="flex items-center gap-2 text-[0.7rem] text-gold-ink">
+                    <SparkIcon className="size-3.5" />
+                    সপ্তাহের বই
+                  </div>
+                  <p className="mt-2 font-display text-lg font-semibold leading-snug text-ink">
+                    {featured.title}
+                  </p>
+                  <p className="mt-1 text-xs text-muted">
+                    {featured.author} · {featured.read_time} মিনিট
+                  </p>
                 </div>
-                <p className="mt-2 font-display text-lg font-semibold leading-snug text-ink">
-                  {featured.title}
-                </p>
-                <p className="mt-1 text-xs text-muted">
-                  {featured.author} · {featured.readTime} মিনিট
-                </p>
               </div>
-            </div>
+            )}
           </div>
         </div>
       </section>
@@ -133,7 +138,7 @@ export default function HomePage() {
             description="কোন মুডে আছেন, তার ওপর ভর করে বেছে নিন আপনার পরের বইটি।"
           />
           <div className="mt-8 grid gap-x-12 sm:grid-cols-2 lg:grid-cols-3">
-            {CATEGORIES.map((category) => (
+            {categories.map((category) => (
               <Link
                 key={category.slug}
                 href={`/books?category=${category.slug}`}
@@ -148,7 +153,7 @@ export default function HomePage() {
                     {category.blurb}
                   </p>
                   <p className="mt-2 text-xs text-faint">
-                    {countBooksByCategory(category.slug)}টি সারসংক্ষেপ
+                    {category.books_count}টি সারসংক্ষেপ
                   </p>
                 </div>
               </Link>

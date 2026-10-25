@@ -3,37 +3,46 @@
 import { useDeferredValue, useMemo, useState } from "react";
 import { BookCard } from "@/components/book-card";
 import { ChevronDownIcon, SearchIcon } from "@/components/icons";
-import { getCategory, CATEGORIES } from "@/data/categories";
-import { PUBLISHED_BOOKS, countBooksByCategory } from "@/data/books";
-import type { CategorySlug } from "@/types/book";
+import type { Book, Category } from "@/lib/api";
 
 type SortOption = "newest" | "title" | "quick";
 
-function isCategory(value: string | undefined): value is CategorySlug {
-  return CATEGORIES.some((category) => category.slug === value);
+interface BooksExplorerProps {
+  initialBooks: Book[];
+  initialCategories: Category[];
+  initialCategory?: string;
+  initialSearch?: string;
+  initialSort?: SortOption;
+  initialPage?: number;
+}
+
+function isCategory(value: string | undefined, categories: Category[]): value is string {
+  return categories.some((category) => category.slug === value);
 }
 
 export function BooksExplorer({
+  initialBooks,
+  initialCategories,
   initialCategory,
-}: {
-  initialCategory?: string;
-}) {
-  const [query, setQuery] = useState("");
-  const [category, setCategory] = useState<CategorySlug | "all">(
-    isCategory(initialCategory) ? initialCategory : "all",
+  initialSearch,
+  initialSort = "newest",
+  initialPage = 1,
+}: BooksExplorerProps) {
+  const [query, setQuery] = useState(initialSearch ?? "");
+  const [category, setCategory] = useState<string>(
+    isCategory(initialCategory, initialCategories) ? initialCategory : "all",
   );
-  const [sort, setSort] = useState<SortOption>("newest");
+  const [sort, setSort] = useState<SortOption>(initialSort);
   const deferredQuery = useDeferredValue(query);
 
   const filteredBooks = useMemo(() => {
     const search = deferredQuery.trim().toLocaleLowerCase("bn-BD");
-    const result = PUBLISHED_BOOKS.filter((book) => {
-      const matchesCategory =
-        category === "all" || book.category === category;
+    const result = initialBooks.filter((book) => {
+      const matchesCategory = category === "all" || book.category.slug === category;
       if (!matchesCategory) return false;
       if (!search) return true;
 
-      const categoryName = getCategory(book.category).name;
+      const categoryName = book.category.name;
       const haystack = [
         book.title,
         book.author,
@@ -49,10 +58,10 @@ export function BooksExplorer({
 
     return [...result].sort((a, b) => {
       if (sort === "title") return a.title.localeCompare(b.title, "bn");
-      if (sort === "quick") return a.readTime - b.readTime;
-      return b.addedAt.localeCompare(a.addedAt);
+      if (sort === "quick") return a.read_time - b.read_time;
+      return b.added_at.localeCompare(a.added_at);
     });
-  }, [category, deferredQuery, sort]);
+  }, [category, deferredQuery, sort, initialBooks, initialCategories]);
 
   const hasFilters = query.trim().length > 0 || category !== "all";
 
@@ -136,7 +145,7 @@ export function BooksExplorer({
         >
           সব বই
         </button>
-        {CATEGORIES.map((item) => (
+        {initialCategories.map((item) => (
           <button
             key={item.slug}
             type="button"
@@ -163,8 +172,8 @@ export function BooksExplorer({
         </p>
         {category !== "all" ? (
           <p className="text-sm text-faint">
-            {getCategory(category).name} ·{" "}
-            {countBooksByCategory(category)}টি সারসংক্ষেপ
+            {initialCategories.find(c => c.slug === category)?.name} ·{" "}
+            {initialCategories.find(c => c.slug === category)?.books_count}টি সারসংক্ষেপ
           </p>
         ) : null}
       </div>

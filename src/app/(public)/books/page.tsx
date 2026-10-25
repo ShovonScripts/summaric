@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { BooksExplorer } from "@/components/books-explorer";
-import { PUBLISHED_BOOKS } from "@/data/books";
-import { CATEGORIES } from "@/data/categories";
+import { getBooks, getCategories, getPublishedBooksCount } from "@/lib/data";
 
 export const metadata: Metadata = {
   title: "বইয়ের সংগ্রহ",
@@ -10,62 +9,99 @@ export const metadata: Metadata = {
     "বিষয়, লেখক বা পড়ার সময় অনুযায়ী বেছে নিন আপনার পরের বই। বাছাই করা বাংলা ও বিশ্বসাহিত্যের সারসংক্ষেপ।",
 };
 
+type SortOption = "newest" | "title" | "quick";
+
+function isValidSort(value: string | undefined): value is SortOption {
+  return value === "newest" || value === "title" || value === "quick";
+}
+
 async function BooksExplorerSlot({
   searchParams,
 }: {
-  searchParams: Promise<{ category?: string | string[] }>;
+  searchParams: Promise<{ category?: string | string[]; search?: string | string[]; sort?: string | string[]; page?: string | string[] }>;
 }) {
   const params = await searchParams;
   const initialCategory =
     typeof params.category === "string" ? params.category : undefined;
+  const initialSearch =
+    typeof params.search === "string" ? params.search : undefined;
+  const initialSort =
+    typeof params.sort === "string" && isValidSort(params.sort) ? params.sort : "newest";
+  const initialPage =
+    typeof params.page === "string" ? parseInt(params.page, 10) : 1;
+
+  const [booksResponse, categories] = await Promise.all([
+    getBooks({
+      search: initialSearch,
+      category: initialCategory,
+      sort: initialSort,
+      page: initialPage,
+    }),
+    getCategories(),
+  ]);
 
   return (
     <BooksExplorer
-      key={initialCategory ?? "all"}
+      key={`${initialCategory ?? "all"}-${initialSearch ?? ""}-${initialSort}-${initialPage}`}
+      initialBooks={booksResponse.data}
+      initialCategories={categories}
       initialCategory={initialCategory}
+      initialSearch={initialSearch}
+      initialSort={initialSort}
+      initialPage={initialPage}
     />
   );
 }
 
-export default function BooksPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ category?: string | string[] }>;
-}) {
-  return (
-    <>
-      <section className="border-b border-line bg-paper-deep">
-        <div className="container-shell py-14 sm:py-20">
-          <p className="text-sm text-gold-ink">পাঠের তালিকা</p>
-          <div className="mt-4 grid gap-6 lg:grid-cols-[1fr_auto] lg:items-end">
+async function BooksHeader() {
+  const [categories, totalBooks] = await Promise.all([
+    getCategories(),
+    getPublishedBooksCount(),
+  ]);
+
+return (
+    <section className="border-b border-line bg-paper-deep">
+      <div className="container-shell py-14 sm:py-20">
+        <p className="text-sm text-gold-ink">পাঠের তালিকা</p>
+        <div className="mt-4 grid gap-6 lg:grid-cols-[1fr_auto] lg:items-end">
+          <div>
+            <h1 className="text-[clamp(2.5rem,5.5vw,4.8rem)] font-semibold leading-[1.12] text-ink">
+              আপনার পরের বইটি খুঁজে নিন।
+            </h1>
+            <p className="mt-5 max-w-2xl text-base leading-8 text-muted">
+              {totalBooks}টি বাছাই করা বই, {categories.length}টি
+              বিষয়ে সাজানো। সময় কম থাকলে দ্রুত পড়ার বই, আর গভীরে যেতে চাইলে
+              বড় পাঠ—দুটোই এখানে।
+            </p>
+          </div>
+          <div className="flex gap-8 border-t border-line pt-5 text-sm text-muted lg:border-t-0 lg:pt-0">
             <div>
-              <h1 className="text-[clamp(2.5rem,5.5vw,4.8rem)] font-semibold leading-[1.12] text-ink">
-                আপনার পরের বইটি খুঁজে নিন।
-              </h1>
-              <p className="mt-5 max-w-2xl text-base leading-8 text-muted">
-                {PUBLISHED_BOOKS.length}টি বাছাই করা বই, {CATEGORIES.length}টি
-                বিষয়ে সাজানো। সময় কম থাকলে দ্রুত পড়ার বই, আর গভীরে যেতে চাইলে
-                বড় পাঠ—দুটোই এখানে।
+              <p className="font-display text-2xl font-semibold text-ink">
+                {totalBooks}
               </p>
+              <p className="mt-1 text-xs">প্রকাশিত সারসংক্ষেপ</p>
             </div>
-            <div className="flex gap-8 border-t border-line pt-5 text-sm text-muted lg:border-t-0 lg:pt-0">
-              <div>
-                <p className="font-display text-2xl font-semibold text-ink">
-                  {PUBLISHED_BOOKS.length}
-                </p>
-                <p className="mt-1 text-xs">প্রকাশিত সারসংক্ষেপ</p>
-              </div>
-              <div>
-                <p className="font-display text-2xl font-semibold text-ink">
-                  {CATEGORIES.length}
-                </p>
-                <p className="mt-1 text-xs">বিষয়</p>
-              </div>
+            <div>
+              <p className="font-display text-2xl font-semibold text-ink">
+                {categories.length}
+              </p>
+              <p className="mt-1 text-xs">বিষয়</p>
             </div>
           </div>
         </div>
-      </section>
+      </div>
+    </section>
+  );
+}
 
+export default async function BooksPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ category?: string | string[]; search?: string | string[]; sort?: string | string[]; page?: string | string[] }>;
+}) {
+  return (
+    <>
+      <BooksHeader />
       <section className="section-pad">
         <div className="container-shell">
           <Suspense
