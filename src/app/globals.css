@@ -1,0 +1,456 @@
+@import "tailwindcss";
+
+@theme inline {
+  --color-paper: var(--paper);
+  --color-paper-deep: var(--paper-deep);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-faint: var(--faint);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-gold: var(--gold);
+  --color-gold-ink: var(--gold-ink);
+  --color-green: var(--green);
+  --color-green-ink: var(--green-ink);
+  --font-display: var(--font-bengali-serif);
+  --font-body: var(--font-bengali-sans);
+  --font-sans: var(--font-bengali-sans);
+}
+
+:root {
+  color-scheme: dark;
+  --paper: #071a1f;
+  --paper-deep: #041216;
+  --surface: #0c252a;
+  --surface-2: #103138;
+  --ink: #eef5f3;
+  --muted: #9ab2b0;
+  --faint: #78918f;
+  --line: rgba(238, 245, 243, 0.13);
+  --line-strong: rgba(238, 245, 243, 0.26);
+  --gold: #f5bc5c;
+  --gold-ink: #f5bc5c;
+  --green: #3cc492;
+  --green-ink: #6ee0b8;
+  --focus: #f5bc5c;
+  --cover-shadow: 0 30px 70px rgba(0, 0, 0, 0.45),
+    0 8px 22px rgba(0, 0, 0, 0.3);
+  --header-bg: rgba(4, 18, 22, 0.82);
+}
+
+html[data-theme="light"] {
+  color-scheme: light;
+  --paper: #eef2ed;
+  --paper-deep: #e4ebe5;
+  --surface: #f7faf7;
+  --surface-2: #ffffff;
+  --ink: #082126;
+  --muted: #4e6a67;
+  --faint: #6d8783;
+  --line: rgba(8, 33, 38, 0.14);
+  --line-strong: rgba(8, 33, 38, 0.3);
+  --gold: #b87912;
+  --gold-ink: #7c4f05;
+  --green: #157a5a;
+  --green-ink: #0d5c43;
+  --focus: #7c4f05;
+  --cover-shadow: 0 28px 60px rgba(18, 42, 42, 0.2),
+    0 8px 18px rgba(18, 42, 42, 0.12);
+  --header-bg: rgba(238, 242, 237, 0.84);
+}
+
+* {
+  border-color: var(--line);
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-bengali-sans), "Noto Sans Bengali", sans-serif;
+  line-height: 1.75;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  body {
+    transition: background-color 280ms ease, color 280ms ease;
+  }
+}
+
+::selection {
+  background: var(--gold);
+  color: #071a1f;
+}
+
+:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 3px;
+}
+
+a,
+button,
+input,
+select,
+textarea {
+  -webkit-tap-highlight-color: transparent;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  font-family: var(--font-bengali-serif), "Noto Serif Bengali", serif;
+  line-height: 1.18;
+  letter-spacing: 0;
+  text-wrap: balance;
+}
+
+p {
+  text-wrap: pretty;
+}
+
+svg {
+  display: block;
+}
+
+.container-shell {
+  width: 100%;
+  max-width: 78rem;
+  margin-inline: auto;
+  padding-inline: clamp(1rem, 4vw, 2.75rem);
+}
+
+.section-pad {
+  padding-block: clamp(4rem, 9vw, 7.5rem);
+}
+
+.display-hero {
+  font-size: clamp(2.35rem, 7vw, 5.75rem);
+  line-height: 1.1;
+}
+
+.section-title {
+  font-size: clamp(2rem, 4.2vw, 3.5rem);
+  line-height: 1.15;
+}
+
+.hero-atmosphere {
+  background:
+    radial-gradient(
+      ellipse 56% 62% at 84% 18%,
+      rgba(245, 188, 92, 0.14),
+      transparent 68%
+    ),
+    radial-gradient(
+      ellipse 44% 52% at 10% 84%,
+      rgba(60, 196, 146, 0.11),
+      transparent 70%
+    );
+}
+
+.hero-watermark {
+  color: var(--ink);
+  opacity: 0.035;
+  font-family: var(--font-bengali-serif), "Noto Serif Bengali", serif;
+  font-size: clamp(20rem, 42vw, 38rem);
+  line-height: 0.8;
+  pointer-events: none;
+  user-select: none;
+}
+
+.skip-link {
+  position: fixed;
+  left: 1rem;
+  top: -5rem;
+  z-index: 100;
+  border-radius: 999px;
+  background: var(--gold);
+  color: #071a1f;
+  padding: 0.65rem 1.1rem;
+  font-weight: 600;
+  transition: top 160ms ease;
+}
+
+.skip-link:focus {
+  top: 1rem;
+}
+
+.book-cover {
+  position: relative;
+  isolation: isolate;
+  aspect-ratio: 5 / 8;
+  width: 100%;
+  overflow: hidden;
+  border-radius: 0.25rem 0.7rem 0.7rem 0.25rem;
+  background: var(--cover-base);
+  color: var(--cover-ink);
+  box-shadow: var(--cover-shadow);
+  container-type: inline-size;
+}
+
+.book-cover::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  z-index: 3;
+  width: 7%;
+  background: linear-gradient(
+    90deg,
+    rgba(0, 0, 0, 0.4),
+    rgba(255, 255, 255, 0.08) 46%,
+    rgba(0, 0, 0, 0.16)
+  );
+  border-right: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.book-cover::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  background: linear-gradient(
+      115deg,
+      rgba(255, 255, 255, 0.1),
+      transparent 34%,
+      transparent 68%,
+      rgba(0, 0, 0, 0.2)
+    ),
+    repeating-linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0.025) 0,
+      rgba(255, 255, 255, 0.025) 1px,
+      transparent 1px,
+      transparent 5px
+    );
+  mix-blend-mode: soft-light;
+}
+
+.book-cover__art {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  height: 100%;
+  width: 100%;
+}
+
+.book-cover__content {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 8cqw 7cqw 7cqw 12cqw;
+}
+
+.book-cover__category {
+  font-size: 2.9cqw;
+  line-height: 1.45;
+  opacity: 0.82;
+  max-width: 70%;
+}
+
+.book-cover__title {
+  font-family: var(--font-bengali-serif), "Noto Serif Bengali", serif;
+  font-size: 9.4cqw;
+  font-weight: 600;
+  line-height: 1.2;
+  text-wrap: balance;
+}
+
+.book-cover__rule {
+  width: 17cqw;
+  height: 1px;
+  margin-block: 3.2cqw 2.2cqw;
+  background: var(--cover-accent);
+}
+
+.book-cover__author {
+  font-size: 3.3cqw;
+  line-height: 1.5;
+  opacity: 0.76;
+}
+
+.hero-cover {
+  --cover-rotate: -2deg;
+  transform: rotate(var(--cover-rotate));
+  animation: cover-settle 900ms cubic-bezier(0.2, 0.75, 0.2, 1) both;
+}
+
+.hero-copy > * {
+  animation: hero-rise 720ms cubic-bezier(0.2, 0.75, 0.2, 1) both;
+}
+
+.hero-copy > *:nth-child(2) {
+  animation-delay: 70ms;
+}
+
+.hero-copy > *:nth-child(3) {
+  animation-delay: 130ms;
+}
+
+.hero-copy > *:nth-child(4) {
+  animation-delay: 190ms;
+}
+
+@keyframes cover-settle {
+  from {
+    opacity: 0;
+    transform: translateY(22px) rotate(-4.5deg) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) rotate(var(--cover-rotate)) scale(1);
+  }
+}
+
+@keyframes hero-rise {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.prose-bn p + p {
+  margin-top: 1.15rem;
+}
+
+.prose-bn strong {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.no-scrollbar {
+  scrollbar-width: none;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.btn-primary,
+.btn-secondary {
+  display: inline-flex;
+  min-height: 3rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.55rem;
+  border-radius: 999px;
+  padding: 0.72rem 1.35rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  line-height: 1.3;
+  transition: background-color 180ms ease, border-color 180ms ease,
+    color 180ms ease, transform 180ms ease;
+}
+
+.btn-primary {
+  background: var(--gold);
+  color: #071a1f;
+}
+
+.btn-primary:hover {
+  background: #ffd27e;
+}
+
+.btn-secondary {
+  border: 1px solid var(--line-strong);
+  background: transparent;
+  color: var(--ink);
+}
+
+.btn-secondary:hover {
+  border-color: var(--gold-ink);
+  background: var(--surface);
+  color: var(--gold-ink);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .btn-primary:hover,
+  .btn-secondary:hover {
+    transform: translateY(-1px);
+  }
+}
+
+.theme-toggle {
+  display: inline-flex;
+  height: 2.5rem;
+  width: 2.5rem;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted);
+  transition: color 160ms ease, border-color 160ms ease,
+    background-color 160ms ease;
+}
+
+.theme-toggle:hover {
+  border-color: var(--line-strong);
+  background: var(--surface);
+  color: var(--ink);
+}
+
+.theme-toggle--compact {
+  height: 2.25rem;
+  width: 2.25rem;
+}
+
+.theme-icon {
+  height: 1.05rem;
+  width: 1.05rem;
+}
+
+.theme-icon--sun {
+  display: none;
+}
+
+html[data-theme="light"] .theme-icon--sun {
+  display: block;
+}
+
+html[data-theme="light"] .theme-icon--moon {
+  display: none;
+}
+
+.admin-shell {
+  background-image: radial-gradient(
+    circle at 90% 0%,
+    rgba(60, 196, 146, 0.06),
+    transparent 38%
+  );
+}
+
+@media (max-width: 639px) {
+  .hero-cover {
+    --cover-rotate: -1deg;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
