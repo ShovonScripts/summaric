@@ -3,8 +3,17 @@
 namespace App\Http\Resources;
 
 use Illuminate\Http\Request;
+use Illuminate\Http\Resources\Json\JsonResource;
 
-class BookResource extends BaseJsonResource
+/**
+ * A single published book.
+ *
+ * Serialized inside the standard `data` envelope:
+ * `GET /api/books/{slug}` → `{"data": {...}}`.
+ *
+ * @mixin \App\Models\Book
+ */
+class BookResource extends JsonResource
 {
     public function toArray(Request $request): array
     {
@@ -12,7 +21,10 @@ class BookResource extends BaseJsonResource
             'slug' => $this->slug,
             'title' => $this->title,
             'author' => $this->author,
-            'category' => new CategoryResource($this->whenLoaded('category')),
+            'category' => $this->whenLoaded(
+                'category',
+                fn () => new CategoryResource($this->category),
+            ),
             'year' => $this->year,
             'pages' => $this->pages,
             'read_time' => $this->read_time,

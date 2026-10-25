@@ -65,12 +65,19 @@ class Book extends Model
         });
     }
 
+    /**
+     * Ordering for the public listing.
+     *
+     * Every branch ends with a tie-breaker on `id` so the order is fully
+     * deterministic (no two rows can ever swap places between requests),
+     * and `newest` is ordered newest-first on both `added_at` and `id`.
+     */
     public function scopeSort($query, string $sort)
     {
         return match ($sort) {
             'title' => $query->orderBy('title')->orderBy('id'),
             'read_time' => $query->orderBy('read_time')->orderBy('id'),
-            default => $query->latest('added_at')->orderBy('id'),
+            default => $query->orderByDesc('added_at')->orderByDesc('id'),
         };
     }
 

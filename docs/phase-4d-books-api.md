@@ -1,102 +1,234 @@
-# Phase 4D — Books and Categories API Implementation Report
+# Phase 4D — Books and Categories API (Final Report)
 
-**Date**: 2026-10-25  
-**Project Root**: `C:\xampp\htdocs\ProDo\App\summaric`  
-**Latest Commit**: `40c907f` (frontend) + new backend commits
-
----
-
-## 1. Implemented Features
-
-### Database Schema
-| Table | Key Fields | Notes |
-|-------|------------|-------|
-| `categories` | `id`, `slug` (unique), `name`, `blurb`, `motif` | 6 categories matching frontend mock data |
-| `books` | `id`, `slug` (unique), `title`, `author`, `category_id` (FK), `year`, `pages`, `read_time`, `summary`, `key_ideas` (JSON), `quote`, `cover` (JSON), `added_at`, `featured` (bool), `status` (enum: published/draft/review), `tags` (JSON) | 14 books (12 published, 1 draft, 1 review) matching frontend mock data |
-
-### Models & Relationships
-| Model | Relationships |
-|-------|---------------|
-| `Category` | `hasMany(Book::class)` — `books()`, `publishedBooks()` |
-| `Book` | `belongsTo(Category::class)` — `category()` |
-
-### API Endpoints
-
-| Method | Endpoint | Description | Auth |
-|--------|----------|-------------|------|
-| `GET` | `/api/categories` | List all categories with book counts | Public |
-| `GET` | `/api/categories/{slug}` | Single category detail | Public |
-| `GET` | `/api/books` | Paginated list of published books | Public |
-| `GET` | `/api/books/featured` | Featured books (max 5) | Public |
-| `GET` | `/api/books/{slug}` | Single book detail with category | Public |
-
-### Query Parameters (Books Index)
-| Param | Type | Description |
-|-------|------|-------------|
-| `search` | string | Search title/author/summary |
-| `category` | string | Filter by category slug |
-| `sort` | `newest\|title\|read_time` | Sort order |
-| `per_page` | integer (1-50) | Page size (default 12) |
-
-### Response Format
-All endpoints return JSON. Collections are wrapped in a `data` key with pagination metadata (`meta`) and navigation links (`links`). Single resources are wrapped in a `data` key.
+**Date**: 2026-10-25
+**Project Root**: `C:\xampp\htdocs\ProDo\App\summaric`
+**Scope**: Phase 4D-Fix — API response contract, sorting, pagination, featured books, category counts
+**Status**: ✅ Complete — full Laravel test suite green
 
 ---
 
-## 2. Verification Results
+## 1. Root cause of the Phase 4D failures
 
-### Automated Tests
-| Suite | Tests | Assertions | Status |
-|-------|-------|------------|--------|
-| Unit | 1 | 1 | ✅ Pass |
-| Auth (Feature) | 14 | 44 | ✅ Pass |
-| Book API (Feature) | 14 | 42 | ⚠️ 7 failing |
-| Category API (Feature) | 5 | 12 | ⚠️ 4 failing |
-| Example | 1 | 1 | ✅ Pass |
+The failures were **not** six independent bugs. They all came from one design mistake:
+response wrapping was hand-rolled in three different places at once.
 
-### Known Issues (Work in Progress)
-| Area | Issue | Status |
-|------|-------|--------|
-| Book detail endpoint | Response wrapped in `data` key; tests expect root-level | 🔧 In progress |
-| Sort by `read_time` | Secondary sort order not deterministic | 🔧 In progress |
-| Pagination `last_page` | Returns string, test expects integer | 🔧 In progress |
-| Featured endpoint | Returns collection wrapped in `data`; test expects raw array | 🔧 In progress |
-| Book detail `category` relation | Not consistently included in response | 🔧 In progress |
-| Category API | Responses wrapped in `data`; tests expect root-level | 🔧 In progress |
+| # | Defect | Effect |
+|---|--------|--------|
+| 1 | `BaseJsonResource::__construct()` called `$this->withoutWrapping()` | `JsonResource::withoutWrapping()` is **global/static** — the very first resource built disabled the `data` wrapper for *every* response in the process. |
+| 2 | `BookController@show` / `CategoryController@show` returned `(new XResource($model))->withoutWrapping()` | `withoutWrapping()` returns `void`, so the controller returned `null` → Laravel responded `200` with an **empty body** → `Invalid JSON was returned from the route`. |
+| 3 | `BookCollection::toArray()` returned its own `['data' => …, 'meta' => …, 'links' => …]` | Laravel's `PaginatedResourceResponse` then wrapped that payload once more → `{"data":{"data":[…],"meta":…,"links":…}}`. `meta.last_page` was therefore unreachable at `meta.last_page`, pagination assertions saw `data` with 3 keys, and every `data.*.slug` lookup returned `null`. |
+| 4 | `CategoryCollection` / `FeaturedBookCollection` called `withoutWrapping()` + returned `$this->collection->toArray()` | Those endpoints leaked a bare root-level array of **raw Eloquent models** (including `id`, `category_id`) instead of `{"data":[…]}` of resources. |
+| 5 | `Book::scopeSort()` — `read_time` had no tie-breaker in practice | Ordering of equal `read_time` values was left to the storage engine → non-deterministic. |
+
+The fix removes all three hand-rolled envelopes and lets Laravel produce the
+envelope exactly once: `JsonResource::wrap('data')` (declared explicitly in
+`AppServiceProvider`) + default `ResourceCollection` behaviour, with
+`$collects` pointing at the real resources.
 
 ---
 
-## 3. Local Development Commands
+## 2. Final response contract
 
-```bash
-# Backend (Laravel)
-cd backend
-php artisan serve          # http://localhost:8000
-php artisan test           # Run test suite
-php artisan migrate:fresh --seed  # Reset DB with demo data
+Declared in `app/Providers/AppServiceProvider.php` and enforced by the resources.
 
-# Frontend (Next.js)
-cd ..
-npm run dev                # http://localhost:3000
-npm run build              # Production build
-npm run lint               # ESLint
-npx tsc --noEmit           # TypeScript check
+| Case | Shape |
+|------|-------|
+| Single resource | `{ "data": { … } }` |
+| Non-paginated collection | `{ "data": [ … ] }` |
+| Paginated collection | `{ "data": [ … ], "meta": { … }, "links": { … } }` |
+
+Rules that follow from this and must be preserved:
+
+- A resource **never** disables the wrapper (`withoutWrapping()` is global and stays unused).
+- A collection **never** writes a `data` key inside `toArray()`.
+- A resource is **never** returned as an array by accident — every item in a
+  collection is a `BookResource` / `CategoryResource`.
+
+Examples (trimmed):
+
+```json
+// GET /api/books/featured
+{ "data": [ { "slug": "thakar-shilpo", "title": "থাকার শিল্প", "category": { … } } ] }
+
+// GET /api/books/nishobder-bhasha
+{ "data": { "slug": "nishobder-bhasha", "title": "নিঃশব্দের ভাষা", "category": { "slug": "monobiggan", … } } }
+
+// GET /api/categories
+{ "data": [ { "slug": "itihas", "name": "ইতিহাস ও সমাজ", "books_count": 2 } ] }
+
+// GET /api/books?per_page=10
+{
+  "data": [ … 10 books … ],
+  "links": { "first": "…?page=1", "last": "…?page=2", "prev": null, "next": "…?page=2" },
+  "meta": { "current_page": 1, "from": 1, "last_page": 2, "per_page": 10, "to": 10, "total": 12, … }
+}
 ```
 
----
-
-## 3. Next Steps (Phase 4E+)
-
-1. **Resolve API response wrapping** — Align single-resource endpoints to return unwrapped data; keep collections wrapped with pagination metadata.
-2. **Fix sorting & pagination** — Stabilize `read_time` sort; cast `meta.last_page` to integer.
-3. **Complete relationship loading** — Ensure `category` relation eager-loads in `BookController@show`.
-6. **Frontend integration** — Replace mock data in `src/data/books.ts` with `fetch('/api/books')` calls.
-7. **Admin write endpoints** — Add `POST/PUT/DELETE /api/books` with Sanctum auth & role checks.
-8. **Search enhancement** — Add full-text search (Meilisearch) for Bengali/English.
-7. **Deploy** — Dockerize, CI/CD pipeline, staging environment.
+> `meta.links` (the page-by-page array generated by Laravel's length-aware
+> paginator) also exists inside `meta`; `links` at the root holds only
+> `first/last/prev/next`. Consumers that use root `links` are unaffected.
 
 ---
 
-**Auditor**: opencode agent  
-**Report generated**: 2026-10-25  
-**No secrets or credentials included in this report.**
+## 3. Endpoint behaviour
+
+| Method | Endpoint | Behaviour | Envelope |
+|--------|----------|-----------|----------|
+| GET | `/api/books` | Published books only; `search`, `category`, `sort`, `per_page`, `page` | paginated |
+| GET | `/api/books/featured` | Published **and** `featured = true`; newest first; **max 5** | non-paginated |
+| GET | `/api/books/{slug}` | Published book **with `category` eager-loaded**; `404` for unknown, `draft` and `review` | single |
+| GET | `/api/categories` | All categories, ordered by `name`, `id`; `books_count` included | non-paginated |
+| GET | `/api/categories/{slug}` | Single category with `books_count`; `404` when unknown | single |
+
+Both book endpoints eager-load the category relation (`->with('category')`), so a
+listing costs **3 queries** (count + page + categories) regardless of page size
+and a detail request costs **2**; assertions in the suite fail if that regresses.
+
+---
+
+## 4. Sorting semantics (`Book::scopeSort`)
+
+| `sort` value | Primary | Tie-breaker |
+|--------------|---------|-------------|
+| `title` | `title ASC` | `id ASC` |
+| `read_time` | `read_time ASC` | `id ASC` |
+| anything else / absent (`newest`) | `added_at DESC` | `id DESC` |
+
+Every branch ends with an `id` tie-breaker, so paging through a listing can
+never show or skip a row because two rows shared a primary sort value.
+An unknown `sort` value silently falls back to `newest`.
+
+## 5. Pagination semantics
+
+- `per_page` is clamped to **1…50** (default `12`); `per_page=0` becomes `1`,
+  `per_page=500` becomes `50`.
+- `page` is the standard Laravel paginator parameter.
+- `meta.last_page` is produced by the paginator (`(int) ceil(total / per_page)`)
+  and is a **JSON number**; the suite asserts `assertIsInt()` on it.
+- `meta` keys: `current_page`, `from`, `last_page`, `per_page`, `to`, `total`,
+  plus the paginator's `links`/`path`.
+- `links` keys: `first`, `last`, `prev`, `next` (`null` where not applicable).
+- The listing is non-destructive and read-only; no endpoint mutates data.
+
+## 6. Category count semantics
+
+- `books_count` = number of **published** books in the category
+  (`CategorySeeder` gives 2 per category; draft/review books are excluded).
+- Computed with `withCount(['publishedBooks as books_count'])` — a single query
+  with a correlated subquery, **no N+1**, verified by a query-count test.
+- Serialized as a number (`(int)` cast in `CategoryResource`), never a string.
+- When a category is embedded inside a book response (`data.category`), the
+  count is **omitted** because it was not counted — resources only emit
+  `books_count` when the attribute is present.
+
+---
+
+## 7. Files changed in Phase 4D-Fix
+
+```
+backend/app/Providers/AppServiceProvider.php        explicit JsonResource::wrap('data')
+backend/app/Http/Resources/BookResource.php         plain JsonResource, whenLoaded('category')
+backend/app/Http/Resources/CategoryResource.php     plain JsonResource, int books_count when counted
+backend/app/Http/Resources/BookCollection.php       $collects, no hand-rolled envelope
+backend/app/Http/Resources/CategoryCollection.php   $collects, no hand-rolled envelope
+backend/app/Http/Resources/FeaturedBookCollection.php $collects, no hand-rolled envelope
+backend/app/Http/Resources/BaseJsonResource.php     DELETED (global withoutWrapping source)
+backend/app/Http/Controllers/BookController.php     return resources; deterministic featured; per_page clamp
+backend/app/Http/Controllers/CategoryController.php withCount + return resources
+backend/app/Models/Book.php                         deterministic scopeSort
+backend/phpunit.xml                                 isolated test DB: sqlite / :memory:
+backend/tests/Feature/BookApiTest.php               envelope + deterministic fixtures + new cases
+backend/tests/Feature/CategoryApiTest.php           envelope + count semantics + N+1 guard
+docs/phase-4d-books-api.md                          this report
+```
+
+No frontend file, migration, seeder, auth controller or route was touched.
+No `migrate:fresh`, `db:wipe` or destructive migration was run; the test suite
+runs on an isolated in-memory SQLite database, so development/demo data in
+MariaDB is never read or written by tests.
+
+---
+
+## 8. Verification (actual output)
+
+```
+$ php artisan test
+PHPUnit 11.5.57
+....................................................... 55 / 55 (100%)
+Time: 00:02.267, Memory: 42.50 MB
+OK (55 tests, 247 assertions)
+```
+
+| Suite | Tests | Result |
+|-------|-------|--------|
+| `tests/Unit/ExampleTest` | 1 | ✅ |
+| `tests/Feature/ExampleTest` | 1 | ✅ |
+| `tests/Feature/Auth/AuthenticationTest` | 21 | ✅ |
+| `tests/Feature/BookApiTest` | 25 | ✅ |
+| `tests/Feature/CategoryApiTest` | 7 | ✅ |
+| **Total** | **55 tests / 247 assertions** | **✅ 0 failures, 0 errors** |
+
+For reference, the failing baseline reproduced before any change was
+**41 tests, 134 assertions, 9 failures** (8 × `BookApiTest`, 1 × `CategoryApiTest`;
+three of them surfaced as `Invalid JSON was returned from the route`). The
+earlier report's "6 failures" and "3 + 3" split did not match reality.
+
+```
+$ composer validate --strict --no-check-publish
+./composer.json is valid
+
+$ php artisan route:list --path=api
+GET|HEAD  api/books ....................... BookController@index
+GET|HEAD  api/books/featured ............. BookController@featured
+GET|HEAD  api/books/{slug} ............... BookController@show
+GET|HEAD  api/categories ................. CategoryController@index
+GET|HEAD  api/categories/{slug} .......... CategoryController@show
+(+ 6 auth routes)                              Showing [11] routes
+
+$ git diff --check
+# clean for every backend file touched in this phase
+```
+
+**Execution environment note.** This phase was executed in a sandbox without a
+native PHP/Composer/MySQL installation (and without network access to
+packagist/getcomposer), so the suite was run on **PHP 8.4.12 (php-wasm) with
+SQLite `:memory:`** using a composer-compatible `vendor/` built from the
+existing `composer.lock`. None of that harness lives in the repository. Please
+re-run `php artisan test` locally as the final confirmation — the suite no
+longer depends on the local database, so it will use in-memory SQLite there too.
+
+---
+
+## 9. Unresolved issues / follow-ups
+
+1. **Local re-run** — confirm the 55/247 result on the XAMPP PHP 8.2/Composer
+   setup (`cd backend && php artisan test`).
+2. **`key_ideas` / `cover` / `tags`** are still returned from JSON columns as
+   arrays; no contract change was needed, but the frontend must cast them once.
+3. **Featured endpoint** has no `sort`/pagination parameters by design (max 5).
+4. **No write endpoints** yet (`POST/PUT/DELETE`) — intentionally out of scope
+   for Phase 4D; admin CRUD is a later phase.
+5. **Search** is still `LIKE`-based (SQLite/MySQL) — server-side full-text is a
+   future phase.
+6. `Book::coverArt()` in the model is dead code from Phase 4A and can be removed
+   when the model is next touched (left untouched here to keep this diff scoped).
+
+---
+
+## 10. Frontend integration readiness
+
+The Phase 4C frontend client (`src/lib/api.ts`) only talks to the auth endpoints;
+the catalogue still renders from `src/data/books.ts`, and nothing in `src/`
+consumes `/api/books` or `/api/categories` yet. There is therefore **no
+compatibility constraint** from existing frontend code, and the contract above
+can be treated as the frontend's target shape:
+
+- list: `response.data` (array), `response.meta.last_page` (number)
+- detail: `response.data` (object)
+- categories: `response.data[].books_count`
+
+**Frontend integration can begin.**
+
+---
+
+**No secrets, tokens or credentials are recorded in this report.**
