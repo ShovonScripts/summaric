@@ -166,10 +166,58 @@ export function EyeIcon(props: IconProps) {
   );
 }
 
+export function EyeClosedIcon(props: IconProps) {
+  return (
+    <IconBase {...props}>
+      <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-4.47 0-8.26-3.94-9.59-9.06" />
+      <path d="M12 4a9.97 9.97 0 0 0-8.55 7.92" />
+      <path d="M12 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+      <path d="M21.54 15.54A8.15 8.15 0 0 0 12 6.06" />
+      <path d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+      <path d="M3.5 3.5L20.5 20.5" strokeWidth="1.5" />
+    </IconBase>
+  );
+}
+
+export function LockIcon(props: IconProps) {
+  return (
+    <IconBase {...props}>
+      <path d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2h12z" />
+    </IconBase>
+  );
+}
+
+export function MailIcon(props: IconProps) {
+  return (
+    <IconBase {...props}>
+      <path d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+    </IconBase>
+  );
+}
+
 export function ChevronDownIcon(props: IconProps) {
   return (
     <IconBase {...props}>
       <path d="m6.5 9.5 5.5 5 5.5-5" />
+    </IconBase>
+  );
+}
+
+export function UserIcon(props: IconProps) {
+  return (
+    <IconBase {...props}>
+      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+      <circle cx="12" cy="7" r="4" />
+    </IconBase>
+  );
+}
+
+export function LogoutIcon(props: IconProps) {
+  return (
+    <IconBase {...props}>
+      <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+      <polyline points="16 17 21 12 16 7" />
+      <line x1="21" y1="12" x2="9" y2="12" />
     </IconBase>
   );
 }

@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Noto_Sans_Bengali, Noto_Serif_Bengali } from "next/font/google";
+import { AuthProviderWrapper } from "@/components/auth-provider";
 import "./globals.css";
 
 const bengaliSans = Noto_Sans_Bengali({
@@ -66,7 +67,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeInit }} />
       </head>
-      <body className="min-h-dvh bg-paper font-body text-ink">{children}</body>
+      <body className="min-h-dvh bg-paper font-body text-ink">
+        <AuthProviderWrapper>{children}</AuthProviderWrapper>
+      </body>
     </html>
   );
 }
