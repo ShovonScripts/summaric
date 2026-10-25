@@ -2,29 +2,24 @@
 
 namespace App\Http\Resources;
 
-use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\ResourceCollection;
 
+/**
+ * Paginated book listing.
+ *
+ * Laravel's paginated resource response produces the agreed envelope:
+ *
+ * ```json
+ * { "data": [ ... ], "meta": { ... }, "links": { ... } }
+ * ```
+ *
+ * `meta.last_page` (and every other meta value) comes straight from the
+ * length-aware paginator, so it is a real integer and is never hardcoded.
+ */
 class BookCollection extends ResourceCollection
 {
-    public function toArray(Request $request): array
-    {
-        return [
-            'data' => $this->collection,
-            'meta' => [
-                'current_page' => $this->currentPage(),
-                'per_page' => $this->perPage(),
-                'last_page' => (int) $this->lastPage(),
-                'total' => $this->total(),
-                'from' => $this->firstItem(),
-                'to' => $this->lastItem(),
-            ],
-            'links' => [
-                'first' => $this->url(1),
-                'last' => $this->url($this->lastPage()),
-                'prev' => $this->previousPageUrl(),
-                'next' => $this->nextPageUrl(),
-            ],
-        ];
-    }
+    /**
+     * The resource that this resource collects.
+     */
+    public $collects = BookResource::class;
 }
