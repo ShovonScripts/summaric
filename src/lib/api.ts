@@ -6,6 +6,7 @@ export interface User {
   email: string;
   email_verified_at: string | null;
   created_at: string;
+  is_admin: boolean;
 }
 
 export interface AuthResponse {
@@ -123,6 +124,8 @@ export type CoverMotif =
 
 export type BookStatus = "published" | "draft" | "review";
 
+export type BookSort = "newest" | "title" | "read_time";
+
 export interface Book {
   slug: string;
   title: string;
@@ -151,7 +154,14 @@ export interface Category {
   name: string;
   blurb: string;
   motif: CoverMotif;
-  books_count: number;
+  books_count?: number;
+}
+
+export interface PaginationLinks {
+  first: string | null;
+  last: string | null;
+  prev: string | null;
+  next: string | null;
 }
 
 export interface BooksResponse {
@@ -161,7 +171,10 @@ export interface BooksResponse {
     last_page: number;
     per_page: number;
     total: number;
+    from: number | null;
+    to: number | null;
   };
+  links?: PaginationLinks;
 }
 
 export interface FeaturedBookResponse {

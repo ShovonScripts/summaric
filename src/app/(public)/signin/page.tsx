@@ -5,12 +5,26 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/hooks/use-auth";
 import { EyeIcon, EyeClosedIcon, MailIcon, LockIcon } from "@/components/icons";
+import { getGoogleAuthUrl } from "@/lib/auth-fetch";
+
+const OAUTH_ERRORS: Record<string, string> = {
+  google_oauth_not_configured: "গুগল লগইন এই মুহূর্তে কনফিগার করা নেই।",
+  google_connection_failed: "গুগলের সঙ্গে সংযোগ করা যায়নি। আবার চেষ্টা করুন।",
+  google_callback_failed: "গুগল লগইন সম্পন্ন করা যায়নি। আবার চেষ্টা করুন।",
+  email_exists_use_password: "এই ইমেইল দিয়ে পাসওয়ার্ড দিয়ে লগইন করুন।",
+};
 
 function SignInPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { login } = useAuth();
-  const callbackUrl = searchParams.get("callbackUrl") || "/books";
+  const { login, error: authError, clearError } = useAuth();
+  const rawCallbackUrl = searchParams.get("callbackUrl");
+  const callbackUrl =
+    rawCallbackUrl && rawCallbackUrl.startsWith("/") ? rawCallbackUrl : "/books";
+  const oauthError = searchParams.get("error");
+  const formError = oauthError
+    ? OAUTH_ERRORS[oauthError] ?? "লগইন সম্পন্ন করা যায়নি।"
+    : authError;
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -19,7 +33,6 @@ function SignInPageContent() {
   const [emailError, setEmailError] = useState("");
   const [passwordError, setPasswordError] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   const validateEmail = (value: string) => {
     if (!value) {
@@ -52,17 +65,20 @@ function SignInPageContent() {
     if (!emailValid || !passwordValid) return;
 
     setSubmitting(true);
+    clearError();
     try {
-      await login(email, password, true);
-    } catch (err) {
-      // Error is handled by the auth context
+      await login(email, password, remember);
+      router.push(callbackUrl);
+      router.refresh();
+    } catch {
+      // Error is surfaced by the auth context.
     } finally {
       setSubmitting(false);
     }
   };
 
   const handleGoogleLogin = () => {
-    window.location.href = "/api/auth/google";
+    window.location.href = getGoogleAuthUrl();
   };
 
   return (
@@ -112,6 +128,14 @@ function SignInPageContent() {
         </div>
 
         <div className="bg-surface border border-line rounded-xl p-6 sm:p-8">
+          {formError ? (
+            <p
+              role="alert"
+              className="mb-5 rounded-lg border border-gold/40 bg-gold/10 px-4 py-3 text-sm text-gold-ink"
+            >
+              {formError}
+            </p>
+          ) : null}
           <form onSubmit={(e) => { e.preventDefault(); handleSubmit(e); }}>
             <div className="space-y-5">
               <div>

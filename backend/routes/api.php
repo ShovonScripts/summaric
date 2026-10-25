@@ -1,11 +1,6 @@
 <?php
 
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
-
-Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
-    return $request->user();
-});
 
 Route::post('/register', [\App\Http\Controllers\Auth\RegisteredUserController::class, 'store']);
 Route::post('/login', [\App\Http\Controllers\Auth\AuthenticatedSessionController::class, 'store']);
@@ -29,3 +24,12 @@ Route::prefix('books')->group(function () {
     Route::get('/featured', [\App\Http\Controllers\BookController::class, 'featured']);
     Route::get('/{slug}', [\App\Http\Controllers\BookController::class, 'show']);
 });
+
+Route::middleware(['auth:sanctum', 'admin'])
+    ->prefix('admin')
+    ->group(function () {
+        Route::get('/stats', [\App\Http\Controllers\Admin\DashboardController::class, 'index']);
+
+        Route::apiResource('books', \App\Http\Controllers\Admin\BookController::class);
+        Route::apiResource('categories', \App\Http\Controllers\Admin\CategoryController::class);
+    });

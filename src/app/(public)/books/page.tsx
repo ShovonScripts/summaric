@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
+import type { BookSort } from "@/lib/api";
 import { BooksExplorer } from "@/components/books-explorer";
 import { getBooks, getCategories, getPublishedBooksCount } from "@/lib/data";
 
@@ -9,10 +10,16 @@ export const metadata: Metadata = {
     "বিষয়, লেখক বা পড়ার সময় অনুযায়ী বেছে নিন আপনার পরের বই। বাছাই করা বাংলা ও বিশ্বসাহিত্যের সারসংক্ষেপ।",
 };
 
-type SortOption = "newest" | "title" | "quick";
+function normalizeSort(value: string | undefined): BookSort {
+  if (value === "title" || value === "read_time") return value;
+  // Legacy URLs used `quick`; the API calls it `read_time`.
+  if (value === "quick") return "read_time";
+  return "newest";
+}
 
-function isValidSort(value: string | undefined): value is SortOption {
-  return value === "newest" || value === "title" || value === "quick";
+function parsePage(value: string | undefined): number {
+  const page = Number.parseInt(value ?? "1", 10);
+  return Number.isFinite(page) && page > 0 ? page : 1;
 }
 
 async function BooksExplorerSlot({
@@ -25,10 +32,12 @@ async function BooksExplorerSlot({
     typeof params.category === "string" ? params.category : undefined;
   const initialSearch =
     typeof params.search === "string" ? params.search : undefined;
-  const initialSort =
-    typeof params.sort === "string" && isValidSort(params.sort) ? params.sort : "newest";
-  const initialPage =
-    typeof params.page === "string" ? parseInt(params.page, 10) : 1;
+  const initialSort = normalizeSort(
+    typeof params.sort === "string" ? params.sort : undefined,
+  );
+  const initialPage = parsePage(
+    typeof params.page === "string" ? params.page : undefined,
+  );
 
   const [booksResponse, categories] = await Promise.all([
     getBooks({
@@ -44,11 +53,11 @@ async function BooksExplorerSlot({
     <BooksExplorer
       key={`${initialCategory ?? "all"}-${initialSearch ?? ""}-${initialSort}-${initialPage}`}
       initialBooks={booksResponse.data}
+      initialMeta={booksResponse.meta}
       initialCategories={categories}
       initialCategory={initialCategory}
       initialSearch={initialSearch}
       initialSort={initialSort}
-      initialPage={initialPage}
     />
   );
 }

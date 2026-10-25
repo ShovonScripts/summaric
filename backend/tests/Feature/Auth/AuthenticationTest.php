@@ -299,6 +299,9 @@ class AuthenticationTest extends TestCase
 
         $response->assertStatus(302);
         $redirectUrl = $response->headers->get('Location');
-        $this->assertStringContainsString(config('app.url', 'http://localhost'), $redirectUrl);
+        $this->assertStringStartsWith(
+            config('app.frontend_url') . '/library',
+            $redirectUrl,
+        );
     }
 }

@@ -175,8 +175,9 @@ class BookApiTest extends TestCase
     public function test_can_filter_by_category(): void
     {
         $category = Category::where('slug', 'monon')->firstOrFail();
+        $otherCategory = Category::where('slug', '!=', 'monon')->firstOrFail();
         Book::factory()->published()->create(['category_id' => $category->id, 'slug' => 'monon-book']);
-        Book::factory()->published()->create(['slug' => 'other-book']);
+        Book::factory()->published()->create(['category_id' => $otherCategory->id, 'slug' => 'other-book']);
 
         $response = $this->getJson('/api/books?category=monon');
 

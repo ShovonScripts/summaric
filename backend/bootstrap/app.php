@@ -14,6 +14,7 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware) {
         $middleware->alias([
             'auth.session' => \Laravel\Sanctum\Http\Middleware\AuthenticateSession::class,
+            'admin' => \App\Http\Middleware\EnsureUserIsAdmin::class,
         ]);
         $middleware->api(prepend: [
             \Illuminate\Session\Middleware\StartSession::class,

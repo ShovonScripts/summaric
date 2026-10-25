@@ -9,7 +9,7 @@ import {
   ClockIcon,
   SparkIcon,
 } from "@/components/icons";
-import { getFeaturedBook, getCategories, getPublishedBooksCount, getAllPublishedBooks } from "@/lib/data";
+import { getFeaturedBook, getCategories, getBooks } from "@/lib/data";
 
 const NOTES = [
   {
@@ -33,16 +33,16 @@ const NOTES = [
 ];
 
 export default async function HomePage() {
-  const [featured, categories, totalBooks, allBooks] = await Promise.all([
+  const [featured, categories, booksResponse] = await Promise.all([
     getFeaturedBook(),
     getCategories(),
-    getPublishedBooksCount(),
-    getAllPublishedBooks(),
+    getBooks({ per_page: 50 }),
   ]);
 
-  const latest = allBooks.filter(
-    (book) => book.slug !== featured?.slug,
-  ).slice(0, 4);
+  const totalBooks = booksResponse.meta.total;
+  const latest = booksResponse.data
+    .filter((book) => book.slug !== featured?.slug)
+    .slice(0, 4);
 
   return (
     <>
@@ -153,7 +153,7 @@ export default async function HomePage() {
                     {category.blurb}
                   </p>
                   <p className="mt-2 text-xs text-faint">
-                    {category.books_count}টি সারসংক্ষেপ
+                    {category.books_count ?? 0}টি সারসংক্ষেপ
                   </p>
                 </div>
               </Link>

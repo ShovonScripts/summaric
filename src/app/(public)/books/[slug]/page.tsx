@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { BookCard } from "@/components/book-card";
 import { BookCover } from "@/components/book-cover";
 import { ClockIcon, TagIcon } from "@/components/icons";
-import { getBook, getCategories, getAllPublishedBooks, getCategory } from "@/lib/data";
+import { getBook, getAllPublishedBooks } from "@/lib/data";
 
 type BookPageProps = {
   params: Promise<{ slug: string }>;
@@ -42,12 +42,7 @@ export default async function BookPage({ params }: BookPageProps) {
 
   if (!book) notFound();
 
-  const [categories, allBooks] = await Promise.all([
-    getCategories(),
-    getAllPublishedBooks(),
-  ]);
-
-  const category = categories.find(c => c.slug === book.category.slug);
+  const allBooks = await getAllPublishedBooks();
   const sameCategory = allBooks.filter(
     (item) => item.category.slug === book.category.slug && item.slug !== book.slug,
   );
@@ -98,14 +93,14 @@ export default async function BookPage({ params }: BookPageProps) {
                 </div>
                 <div className="border-t border-line pt-3">
                   <dt className="text-xs text-faint">বিষয়</dt>
-                  <dd className="mt-1 text-sm text-ink">{category?.name ?? book.category.name}</dd>
+                  <dd className="mt-1 text-sm text-ink">{book.category.name}</dd>
                 </div>
               </dl>
             </div>
 
             <div>
               <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-faint">
-                <span className="text-gold-ink">{category?.name ?? book.category.name}</span>
+                <span className="text-gold-ink">{book.category.name}</span>
                 <span className="h-4 w-px bg-line" aria-hidden="true" />
                 <span className="inline-flex items-center gap-1.5">
                   <ClockIcon className="size-4" />

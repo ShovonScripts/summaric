@@ -1,4 +1,7 @@
+"use client";
+
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import {
   ArrowUpRightIcon,
   BookOpenIcon,
@@ -7,10 +10,10 @@ import {
   SparkIcon,
   TagIcon,
 } from "@/components/icons";
-import { BOOKS } from "@/data/books";
-import { CATEGORIES } from "@/data/categories";
 import { formatBengaliDate } from "@/lib/format";
-import type { BookStatus } from "@/types/book";
+import type { AdminBook, AdminDashboard } from "@/lib/admin";
+import { getAdminDashboard, isAdminError } from "@/lib/admin";
+import type { BookStatus } from "@/lib/api";
 
 const STATUS_META: Record<
   BookStatus,
@@ -33,57 +36,131 @@ const STATUS_META: Record<
   },
 };
 
-const ACTIVITY = [
-  {
-    title: "নতুন ড্রাফট সংরক্ষিত",
-    detail: "ভুলে যাওয়ার শিল্প",
-    time: "আজ, ১০:৪০",
-    color: "bg-gold",
-  },
-  {
-    title: "সারসংক্ষেপ প্রকাশিত",
-    detail: "থাকার শিল্প",
-    time: "গতকাল, ১৮:১৫",
-    color: "bg-green",
-  },
-  {
-    title: "পর্যালোচনায় পাঠানো হয়েছে",
-    detail: "নগরের নিঃশ্বাস",
-    time: "২ দিন আগে",
-    color: "bg-faint",
-  },
-];
+function StatusBadge({ status }: { status: BookStatus }) {
+  const meta = STATUS_META[status];
+  return (
+    <span
+      className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border px-2.5 py-1 text-[0.65rem] ${meta.className}`}
+    >
+      <span className={`size-1.5 rounded-full ${meta.dot}`} aria-hidden="true" />
+      {meta.label}
+    </span>
+  );
+}
+
+function BookRow({ book }: { book: AdminBook }) {
+  return (
+    <tr>
+      <td className="px-5 py-3.5 sm:px-6">
+        <div className="flex items-center gap-3">
+          <span
+            className="relative block h-12 w-9 shrink-0 overflow-hidden rounded-[2px] border border-white/10"
+            style={{ backgroundColor: book.cover?.base ?? "#15343b" }}
+            aria-hidden="true"
+          >
+            <span
+              className="absolute inset-x-0 bottom-0 h-1"
+              style={{ backgroundColor: book.cover?.accent ?? "#f5bc5c" }}
+            />
+          </span>
+          <div className="min-w-0">
+            <Link
+              href={`/admin/books/${book.id}/edit`}
+              className="block max-w-[12rem] truncate font-medium text-ink transition-colors hover:text-gold-ink"
+            >
+              {book.title}
+            </Link>
+            <p className="mt-0.5 text-[0.68rem] text-faint">
+              {book.category?.name} · {book.read_time ?? 0} মিনিট
+            </p>
+          </div>
+        </div>
+      </td>
+      <td className="px-3 py-3.5 text-xs text-muted">{book.author}</td>
+      <td className="px-3 py-3.5">
+        <StatusBadge status={book.status} />
+      </td>
+      <td className="whitespace-nowrap px-5 py-3.5 text-[0.68rem] text-faint sm:px-6">
+        {book.added_at ? formatBengaliDate(book.added_at) : "—"}
+      </td>
+    </tr>
+  );
+}
 
 export default function AdminPage() {
-  const published = BOOKS.filter((book) => book.status === "published");
-  const drafts = BOOKS.filter((book) => book.status === "draft");
-  const review = BOOKS.filter((book) => book.status === "review");
-  const recent = [...BOOKS]
-    .sort((a, b) => b.addedAt.localeCompare(a.addedAt))
-    .slice(0, 6);
+  const [data, setData] = useState<AdminDashboard | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
-  const stats = [
+  useEffect(() => {
+    let active = true;
+
+    getAdminDashboard()
+      .then((dashboard) => {
+        if (active) setData(dashboard);
+      })
+      .catch((err) => {
+        if (active) {
+          setError(isAdminError(err) ? err.message : "ড্যাশবোর্ড লোড হয়নি।");
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  if (error) {
+    return (
+      <div className="mx-auto max-w-2xl border border-line bg-paper p-8 text-center">
+        <h1 className="font-display text-2xl font-semibold text-ink">
+          ড্যাশবোর্ড লোড করা যায়নি
+        </h1>
+        <p className="mt-3 text-sm text-muted">{error}</p>
+        <p className="mt-2 text-xs text-faint">
+          ব্যাকএন্ড চলছে এবং আপনি অ্যাডমিন হিসেবে লগইন করেছেন কি না দেখুন।
+        </p>
+      </div>
+    );
+  }
+
+  if (!data) {
+    return (
+      <div className="mx-auto max-w-6xl space-y-6" aria-busy="true">
+        <div className="h-10 w-64 animate-pulse rounded bg-surface" />
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, index) => (
+            <div key={index} className="h-32 animate-pulse border border-line bg-paper" />
+          ))}
+        </div>
+        <div className="h-64 animate-pulse border border-line bg-paper" />
+      </div>
+    );
+  }
+
+  const { stats, recent_books: recent } = data;
+
+  const cards = [
     {
       label: "প্রকাশিত সারসংক্ষেপ",
-      value: published.length,
+      value: stats.published,
       hint: "পাঠকের জন্য দৃশ্যমান",
       icon: BookOpenIcon,
     },
     {
       label: "ড্রাফট",
-      value: drafts.length,
+      value: stats.draft,
       hint: "সম্পাদনার অপেক্ষায়",
       icon: SparkIcon,
     },
     {
       label: "পর্যালোচনায়",
-      value: review.length,
+      value: stats.review,
       hint: "শেষ দেখার বাকি",
       icon: EyeIcon,
     },
     {
       label: "সক্রিয় বিষয়",
-      value: CATEGORIES.length,
+      value: stats.categories,
       hint: "সংগ্রহে সাজানো",
       icon: TagIcon,
     },
@@ -93,27 +170,22 @@ export default function AdminPage() {
     <div className="mx-auto max-w-6xl space-y-6">
       <section className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <p className="text-sm text-gold-ink">শুভ সকাল, সম্পাদক</p>
+          <p className="text-sm text-gold-ink">অ্যাডমিন ড্যাশবোর্ড</p>
           <h1 className="mt-2 font-display text-[clamp(2rem,4vw,3.1rem)] font-semibold leading-tight text-ink">
             আজ কী যোগ করবেন?
           </h1>
           <p className="mt-3 max-w-2xl text-sm leading-7 text-muted">
-            এই ড্যাশবোর্ডটি ফ্রন্টএন্ড প্রিভিউ। লগইন, সম্পাদনা ও প্রকাশনা
-            পরবর্তী ব্যাকএন্ড ধাপে যুক্ত হবে।
+            মোট {stats.total}টি সারসংক্ষেপ, যার {stats.featured}টি হোমপেজে
+            ফিচার্ড। নতুন বই যোগ করুন, অবস্থা বদলান বা বিভাগ সাজান।
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <button
-            type="button"
-            disabled
-            title="পরবর্তী ধাপে সক্রিয় হবে"
-            className="btn-primary cursor-not-allowed opacity-45"
-          >
+          <Link href="/admin/books/new" className="btn-primary">
             <PlusIcon className="size-4" />
             নতুন সারসংক্ষেপ
-          </button>
-          <Link href="/" className="btn-secondary">
-            সাইট দেখুন
+          </Link>
+          <Link href="/books" className="btn-secondary">
+            পাবলিক তালিকা
             <ArrowUpRightIcon className="size-4" />
           </Link>
         </div>
@@ -123,21 +195,18 @@ export default function AdminPage() {
         aria-label="সংক্ষিপ্ত পরিসংখ্যান"
         className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4"
       >
-        {stats.map((stat) => {
-          const Icon = stat.icon;
+        {cards.map((card) => {
+          const Icon = card.icon;
           return (
-            <div
-              key={stat.label}
-              className="border border-line bg-paper p-5"
-            >
+            <div key={card.label} className="border border-line bg-paper p-5">
               <div className="flex items-start justify-between gap-3">
-                <p className="text-xs leading-5 text-muted">{stat.label}</p>
+                <p className="text-xs leading-5 text-muted">{card.label}</p>
                 <Icon className="size-4 shrink-0 text-gold-ink" />
               </div>
               <p className="mt-4 font-display text-4xl font-semibold leading-none text-ink">
-                {stat.value}
+                {card.value}
               </p>
-              <p className="mt-3 text-[0.7rem] text-faint">{stat.hint}</p>
+              <p className="mt-3 text-[0.7rem] text-faint">{card.hint}</p>
             </div>
           );
         })}
@@ -148,84 +217,43 @@ export default function AdminPage() {
           <div className="flex items-center justify-between gap-4 border-b border-line px-5 py-4 sm:px-6">
             <div>
               <h2 className="font-display text-xl font-semibold text-ink">
-                সাম্প্রতিক বই
+                সাম্প্রতিক সম্পাদনা
               </h2>
               <p className="mt-1 text-xs text-faint">
-                সর্বশেষ যোগ হওয়া সারসংক্ষেপ
+                সর্বশেষ হালনাগাদ হওয়া সারসংক্ষেপ
               </p>
             </div>
             <Link
-              href="/books"
-              className="hidden text-xs text-muted transition-colors hover:text-gold-ink sm:block"
+              href="/admin/books"
+              className="text-xs text-muted transition-colors hover:text-gold-ink"
             >
-              পাবলিক তালিকা
+              সব দেখুন
             </Link>
           </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[39rem] text-left text-sm">
-              <thead>
-                <tr className="border-b border-line text-[0.68rem] text-faint">
-                  <th className="px-5 py-3 font-normal sm:px-6">বই</th>
-                  <th className="px-3 py-3 font-normal">লেখক</th>
-                  <th className="px-3 py-3 font-normal">অবস্থা</th>
-                  <th className="px-5 py-3 font-normal sm:px-6">যোগ হয়েছে</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-line">
-                {recent.map((book) => {
-                  const status = STATUS_META[book.status];
-                  return (
-                    <tr key={book.slug}>
-                      <td className="px-5 py-3.5 sm:px-6">
-                        <div className="flex items-center gap-3">
-                          <span
-                            className="relative block h-12 w-9 shrink-0 overflow-hidden rounded-[2px] border border-white/10"
-                            style={{ backgroundColor: book.cover.base }}
-                            aria-hidden="true"
-                          >
-                            <span
-                              className="absolute inset-x-0 bottom-0 h-1"
-                              style={{ backgroundColor: book.cover.accent }}
-                            />
-                            <span
-                              className="absolute left-1 top-1 h-4 w-px opacity-60"
-                              style={{ backgroundColor: book.cover.accent }}
-                            />
-                          </span>
-                          <div className="min-w-0">
-                            <p className="max-w-[12rem] truncate font-medium text-ink">
-                              {book.title}
-                            </p>
-                            <p className="mt-0.5 text-[0.68rem] text-faint">
-                              {book.readTime} মিনিটের পাঠ
-                            </p>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-3 py-3.5 text-xs text-muted">
-                        {book.author}
-                      </td>
-                      <td className="px-3 py-3.5">
-                        <span
-                          className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border px-2.5 py-1 text-[0.65rem] ${status.className}`}
-                        >
-                          <span
-                            className={`size-1.5 rounded-full ${status.dot}`}
-                            aria-hidden="true"
-                          />
-                          {status.label}
-                        </span>
-                      </td>
-                      <td className="whitespace-nowrap px-5 py-3.5 text-[0.68rem] text-faint sm:px-6">
-                        {formatBengaliDate(book.addedAt)}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+          {recent.length > 0 ? (
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[39rem] text-left text-sm">
+                <thead>
+                  <tr className="border-b border-line text-[0.68rem] text-faint">
+                    <th className="px-5 py-3 font-normal sm:px-6">বই</th>
+                    <th className="px-3 py-3 font-normal">লেখক</th>
+                    <th className="px-3 py-3 font-normal">অবস্থা</th>
+                    <th className="px-5 py-3 font-normal sm:px-6">যোগ হয়েছে</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-line">
+                  {recent.map((book) => (
+                    <BookRow key={book.id} book={book} />
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <p className="px-6 py-10 text-sm text-muted">
+              এখনো কোনো বই নেই। প্রথম সারসংক্ষেপ যোগ করুন।
+            </p>
+          )}
         </section>
 
         <div className="space-y-6">
@@ -233,64 +261,56 @@ export default function AdminPage() {
             <h2 className="font-display text-xl font-semibold text-ink">
               দ্রুত কাজ
             </h2>
-            <p className="mt-1 text-xs text-faint">
-              সম্পাদনার শর্টকাট—শীঘ্রই সক্রিয় হবে
-            </p>
+            <p className="mt-1 text-xs text-faint">সরাসরি সম্পাদনায় যান</p>
             <div className="mt-4 space-y-2">
-              {[
-                { label: "নতুন বই যোগ করুন", icon: PlusIcon },
-                { label: "বিভাগ সাজান", icon: TagIcon },
-                { label: "হোমপেজের নির্বাচন বদলান", icon: SparkIcon },
-              ].map((action) => {
-                const Icon = action.icon;
-                return (
-                  <button
-                    key={action.label}
-                    type="button"
-                    disabled
-                    title="পরবর্তী ধাপে সক্রিয় হবে"
-                    className="flex w-full cursor-not-allowed items-center gap-3 rounded-lg border border-line px-3 py-2.5 text-left text-xs text-faint"
-                  >
-                    <Icon className="size-4 shrink-0" />
-                    <span className="flex-1">{action.label}</span>
-                    <span className="text-[0.6rem]">শীঘ্রই</span>
-                  </button>
-                );
-              })}
+              <Link
+                href="/admin/books/new"
+                className="flex w-full items-center gap-3 rounded-lg border border-line px-3 py-2.5 text-left text-xs text-muted transition-colors hover:border-line-strong hover:text-ink"
+              >
+                <PlusIcon className="size-4 shrink-0" />
+                নতুন বই যোগ করুন
+              </Link>
+              <Link
+                href="/admin/books"
+                className="flex w-full items-center gap-3 rounded-lg border border-line px-3 py-2.5 text-left text-xs text-muted transition-colors hover:border-line-strong hover:text-ink"
+              >
+                <BookOpenIcon className="size-4 shrink-0" />
+                বইয়ের তালিকা দেখুন
+              </Link>
+              <Link
+                href="/admin/categories"
+                className="flex w-full items-center gap-3 rounded-lg border border-line px-3 py-2.5 text-left text-xs text-muted transition-colors hover:border-line-strong hover:text-ink"
+              >
+                <TagIcon className="size-4 shrink-0" />
+                বিভাগ সাজান
+              </Link>
             </div>
           </section>
 
           <section className="border border-line bg-paper p-5 sm:p-6">
             <h2 className="font-display text-xl font-semibold text-ink">
-              সাম্প্রতিক কার্যকলাপ
+              প্রকাশনার অবস্থা
             </h2>
-            <ul className="mt-4 space-y-4">
-              {ACTIVITY.map((item) => (
-                <li key={item.title} className="flex gap-3">
-                  <span
-                    className={`mt-1.5 size-2 shrink-0 rounded-full ${item.color}`}
-                    aria-hidden="true"
-                  />
-                  <div className="min-w-0">
-                    <p className="text-xs text-ink">{item.title}</p>
-                    <p className="mt-0.5 truncate text-[0.68rem] text-muted">
-                      {item.detail}
-                    </p>
-                    <p className="mt-1 text-[0.62rem] text-faint">
-                      {item.time}
-                    </p>
-                  </div>
+            <ul className="mt-4 space-y-3 text-xs">
+              {(
+                [
+                  ["published", stats.published],
+                  ["draft", stats.draft],
+                  ["review", stats.review],
+                ] as [BookStatus, number][]
+              ).map(([status, count]) => (
+                <li
+                  key={status}
+                  className="flex items-center justify-between gap-3 border-b border-line pb-3 last:border-b-0 last:pb-0"
+                >
+                  <StatusBadge status={status} />
+                  <span className="font-display text-lg text-ink">{count}</span>
                 </li>
               ))}
             </ul>
           </section>
         </div>
       </div>
-
-      <section className="border border-dashed border-line-strong px-5 py-4 text-xs leading-6 text-muted">
-        নোট: এই ইন্টারফেসে কোনো প্রকৃত অ্যাকাউন্ট, ডেটাবেস বা প্রকাশনা
-        সংযুক্ত নেই। সব সংখ্যা ও বই ডেমো ডেটা থেকে আসছে।
-      </section>
     </div>
   );
 }

@@ -19,7 +19,7 @@ class GoogleController extends Controller
         $clientId = config('services.google.client_id');
 
         if (!$clientId) {
-            return redirect()->away(config('app.url', 'http://localhost:3000') . '/login?error=google_oauth_not_configured');
+            return redirect()->away(config('app.frontend_url') . '/signin?error=google_oauth_not_configured');
         }
 
         return Socialite::driver('google')
@@ -33,7 +33,7 @@ class GoogleController extends Controller
         $clientSecret = config('services.google.client_secret');
 
         if (!$clientId || !$clientSecret) {
-            return redirect()->away(config('app.url', 'http://localhost:3000') . '/login?error=google_oauth_not_configured');
+            return redirect()->away(config('app.frontend_url') . '/signin?error=google_oauth_not_configured');
         }
 
         try {
@@ -41,9 +41,9 @@ class GoogleController extends Controller
                 ->stateless()
                 ->user();
         } catch (ConnectionException $e) {
-            return redirect()->away(config('app.url', 'http://localhost:3000') . '/login?error=google_connection_failed');
+            return redirect()->away(config('app.frontend_url') . '/signin?error=google_connection_failed');
         } catch (\Exception $e) {
-            return redirect()->away(config('app.url', 'http://localhost:3000') . '/login?error=google_callback_failed');
+            return redirect()->away(config('app.frontend_url') . '/signin?error=google_callback_failed');
         }
 
         $existingUser = User::where('google_id', $googleUser->getId())->first();
@@ -51,13 +51,13 @@ class GoogleController extends Controller
         if ($existingUser) {
             Auth::login($existingUser);
             $request->session()->regenerate();
-            return redirect()->away(config('app.url', 'http://localhost:3000') . '/dashboard');
+            return redirect()->away(config('app.frontend_url') . '/library');
         }
 
         $userByEmail = User::where('email', $googleUser->getEmail())->first();
 
         if ($userByEmail) {
-            return redirect()->away(config('app.url', 'http://localhost:3000') . '/login?error=email_exists_use_password');
+            return redirect()->away(config('app.frontend_url') . '/signin?error=email_exists_use_password');
         }
 
         $user = User::create([
@@ -71,6 +71,6 @@ class GoogleController extends Controller
         Auth::login($user);
         $request->session()->regenerate();
 
-        return redirect()->away(config('app.url', 'http://localhost:3000') . '/dashboard');
+        return redirect()->away(config('app.frontend_url') . '/library');
     }
 }

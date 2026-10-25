@@ -1,10 +1,21 @@
-import type { Book, Category, BooksResponse, CategoriesResponse, BookDetailResponse, CategoryDetailResponse } from "@/lib/api";
+import { cache } from "react";
+import type {
+  Book,
+  BookSort,
+  BooksResponse,
+  CategoriesResponse,
+  Category,
+  CategoryDetailResponse,
+  BookDetailResponse,
+} from "@/lib/api";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
 
+const DEFAULT_PER_PAGE = 12;
+
 async function fetchApi<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
   const url = `${API_BASE_URL}${endpoint}`;
-  
+
   const response = await fetch(url, {
     ...options,
     credentials: 'include',
@@ -25,23 +36,29 @@ async function fetchApi<T>(endpoint: string, options: RequestInit = {}): Promise
   return data as T;
 }
 
-export async function getBooks(params?: {
+export interface GetBooksParams {
   search?: string;
   category?: string;
-  sort?: string;
+  sort?: BookSort;
   page?: number;
   per_page?: number;
-}): Promise<BooksResponse> {
-  const searchParams = new URLSearchParams();
-  if (params?.search) searchParams.set('search', params.search);
-  if (params?.category) searchParams.set('category', params.category);
-  if (params?.sort) searchParams.set('sort', params.sort);
-  if (params?.page) searchParams.set('page', params.page.toString());
-  if (params?.per_page) searchParams.set('per_page', params.per_page.toString());
-
-  const query = searchParams.toString();
-  return fetchApi<BooksResponse>(`/books${query ? `?${query}` : ''}`);
 }
+
+export const getBooks = cache(
+  async (params: GetBooksParams = {}): Promise<BooksResponse> => {
+    const searchParams = new URLSearchParams();
+    if (params.search) searchParams.set('search', params.search);
+    if (params.category) searchParams.set('category', params.category);
+    if (params.sort) searchParams.set('sort', params.sort);
+    if (params.page) searchParams.set('page', params.page.toString());
+    searchParams.set(
+      'per_page',
+      (params.per_page ?? DEFAULT_PER_PAGE).toString(),
+    );
+
+    return fetchApi<BooksResponse>(`/books?${searchParams.toString()}`);
+  },
+);
 
 export async function getFeaturedBook(): Promise<Book | null> {
   const response = await fetchApi<{ data: Book[] }>('/books/featured');
@@ -57,10 +74,10 @@ export async function getBook(slug: string): Promise<Book | null> {
   }
 }
 
-export async function getCategories(): Promise<Category[]> {
+export const getCategories = cache(async (): Promise<Category[]> => {
   const response = await fetchApi<CategoriesResponse>('/categories');
   return response.data;
-}
+});
 
 export async function getCategory(slug: string): Promise<Category | null> {
   try {
@@ -71,12 +88,12 @@ export async function getCategory(slug: string): Promise<Category | null> {
   }
 }
 
-export async function getPublishedBooksCount(): Promise<number> {
+export const getPublishedBooksCount = cache(async (): Promise<number> => {
   const response = await fetchApi<BooksResponse>('/books?per_page=1');
   return response.meta.total;
-}
+});
 
-export async function getAllPublishedBooks(): Promise<Book[]> {
-  const response = await fetchApi<BooksResponse>('/books?per_page=100');
+export const getAllPublishedBooks = cache(async (): Promise<Book[]> => {
+  const response = await fetchApi<BooksResponse>('/books?per_page=50');
   return response.data;
-}
+});

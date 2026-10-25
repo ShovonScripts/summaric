@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/use-auth";
 import { EyeIcon, EyeClosedIcon, MailIcon, LockIcon, UserIcon } from "@/components/icons";
+import { getGoogleAuthUrl } from "@/lib/auth-fetch";
 
 export default function SignUpPage() {
   const router = useRouter();
@@ -429,7 +430,7 @@ export default function SignUpPage() {
 
             <button
               type="button"
-              onClick={() => (window.location.href = "/api/auth/google")}
+              onClick={() => (window.location.href = getGoogleAuthUrl())}
               disabled={submitting}
               className="w-full flex items-center justify-center gap-3 px-4 py-3 border border-line rounded-lg text-sm font-medium text-ink bg-surface hover:bg-surface-2 transition-colors disabled:opacity-50"
             >

@@ -47,6 +47,7 @@ class AuthenticatedSessionController extends Controller
                 'email' => Auth::user()->email,
                 'email_verified_at' => Auth::user()->email_verified_at,
                 'created_at' => Auth::user()->created_at,
+                'is_admin' => (bool) Auth::user()->is_admin,
             ],
         ]);
     }
@@ -80,6 +81,7 @@ class AuthenticatedSessionController extends Controller
                 'email' => $user->email,
                 'email_verified_at' => $user->email_verified_at,
                 'created_at' => $user->created_at,
+                'is_admin' => (bool) $user->is_admin,
             ],
         ]);
     }
