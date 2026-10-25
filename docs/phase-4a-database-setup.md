@@ -1,4 +1,4 @@
-# Phase 4A — Laravel Database Setup Report
+﻿# Phase 4A — Laravel Database Setup Report
 
 **Date**: 2026-10-25  
 **Project Root**: `C:\xampp\htdocs\ProDo\App\summaric`  

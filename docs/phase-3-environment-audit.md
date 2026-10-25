@@ -1,4 +1,4 @@
-# Phase 3 Environment & Database Compatibility Audit
+﻿# Phase 3 Environment & Database Compatibility Audit
 
 **Date**: 2026-10-25  
 **Project**: অনুচ্ছেদ (Anucched) — Bengali Book Summaries Frontend  

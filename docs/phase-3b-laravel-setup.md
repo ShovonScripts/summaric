@@ -1,4 +1,4 @@
-# Phase 3B — Laravel 12 Backend Installation Report
+﻿# Phase 3B — Laravel 12 Backend Installation Report
 
 **Date**: 2026-10-25  
 **Project Root**: `C:\xampp\htdocs\ProDo\App\summaric`  
