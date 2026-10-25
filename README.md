@@ -18,7 +18,14 @@ A dark-editorial Next.js 16 frontend for a Bengali book-summary platform. Origin
 | `/books` | Catalogue — search, category chips, sort, responsive grid |
 | `/books/[slug]` | Book detail — summary, key ideas, quote, related |
 | `/about` | Mission, principles, roadmap |
-| `/admin` | Admin preview dashboard (no auth) |
+| `/signin` | Sign in with Google OAuth + email/password |
+| `/signup` | Register with Google OAuth + email/password |
+| `/library` | Authenticated user library (saved books) |
+| `/admin` | Admin dashboard (auth required, `is_admin` role) |
+| `/admin/books` | Admin book list — filter, search, paginate, delete |
+| `/admin/books/new` | Create new book |
+| `/admin/books/[id]/edit` | Edit book |
+| `/admin/categories` | Admin category CRUD |
 | `/404` | Custom not-found |
 
 ## Commands
@@ -83,15 +90,24 @@ html[data-theme="light"] {
 - 6 categories with motif glyphs.
 - Cover art: CSS-generated abstract book covers (5:8 aspect) using semantic color tokens.
 
-## Admin Preview
+## Admin (Phase 6)
 
-- `/admin` uses a separate layout (no public header/footer).
-- Dashboard with stats, recent books table, activity log, disabled quick actions.
-- All data from mock `src/data/books.ts`; no backend, no auth.
+- Requires Laravel API running on `http://localhost:8000` (MariaDB + Sanctum session cookies).
+- Admin user: `admin@example.com` / `admin12345` (seeded via `ADMIN_EMAIL`/`ADMIN_PASSWORD` in `backend/.env`).
+- Role check: `is_admin` column + `EnsureUserIsAdmin` middleware (`admin` alias).
+- CORS configured in `backend/config/cors.php` with `supports_credentials: true` for `localhost:3000`.
+- Pages:
+  - `/admin` — real dashboard stats + recent books.
+  - `/admin/books` — server-driven list (status filter, debounced search, pagination, delete).
+  - `/admin/books/new` — create book.
+  - `/admin/books/[id]/edit` — edit book (server wrapper + client form).
+  - `/admin/categories` — full CRUD (create, edit, delete blocked when books exist).
+- Components: `AdminGuard`, `AdminNav`, `AdminAccount`, `BookForm`.
+- Client API in `src/lib/admin.ts` (typed, credentialed fetch).
 
 ## Notes
 
 - No external UI/animation/state libraries; inline SVG icons only.
-- No Laravel, Docker, MySQL, payment, or OAuth in this phase.
-- MariaDB 10.4.32 is running locally (port 3306). Next phase should target MySQL 8 for production parity.
-- No secrets committed. `.env` not used.
+- Laravel 12 API (MariaDB 10.4.32) powers auth, catalogue, and admin CRUD (see `backend/`).
+- MariaDB 10.4.32 running locally (port 3306); production parity targets MySQL 8.
+- No secrets committed. `.env` not used; `backend/.env.example` documents required vars.
